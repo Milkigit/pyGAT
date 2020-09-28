@@ -23,9 +23,10 @@ def load_data(path="./data/cora/", dataset="cora"):
     idx_map = {j: i for i, j in enumerate(idx)}
     edges_unordered = np.genfromtxt("{}{}.cites".format(path, dataset), dtype=np.int32)
     edges = np.array(list(map(idx_map.get, edges_unordered.flatten())), dtype=np.int32).reshape(edges_unordered.shape)
+    # adj is coo_matrix now
     adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])), shape=(labels.shape[0], labels.shape[0]), dtype=np.float32)
 
-    # build symmetric adjacency matrix
+    # build symmetric adjacency matrix. adj is csr_matrix now
     adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
 
     features = normalize_features(features)
@@ -71,3 +72,6 @@ def accuracy(output, labels):
     correct = correct.sum()
     return correct / len(labels)
 
+
+if __name__ == '__main__':
+    Load = load_data()

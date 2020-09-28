@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers import GraphAttentionLayer, SpGraphAttentionLayer
+from .layers import GraphAttentionLayer, SpGraphAttentionLayer
 
 
 class GAT(nn.Module):
@@ -9,6 +9,7 @@ class GAT(nn.Module):
         """Dense version of GAT."""
         super(GAT, self).__init__()
         self.dropout = dropout
+        self.xent = nn.CrossEntropyLoss()
 
         self.attentions = [GraphAttentionLayer(nfeat, nhid, dropout=dropout, alpha=alpha, concat=True) for _ in range(nheads)]
         for i, attention in enumerate(self.attentions):
@@ -23,6 +24,11 @@ class GAT(nn.Module):
         x = F.elu(self.out_att(x, adj))
         return F.log_softmax(x, dim=1)
 
+    def loss(self, features, labels, adj):
+        scores = self.forward(features, adj)
+        temp = labels.squeeze()
+        return self.xent(scores, temp)
+
 
 class SpGAT(nn.Module):
     def __init__(self, nfeat, nhid, nclass, dropout, alpha, nheads):
@@ -30,18 +36,18 @@ class SpGAT(nn.Module):
         super(SpGAT, self).__init__()
         self.dropout = dropout
 
-        self.attentions = [SpGraphAttentionLayer(nfeat, 
-                                                 nhid, 
-                                                 dropout=dropout, 
-                                                 alpha=alpha, 
+        self.attentions = [SpGraphAttentionLayer(nfeat,
+                                                 nhid,
+                                                 dropout=dropout,
+                                                 alpha=alpha,
                                                  concat=True) for _ in range(nheads)]
         for i, attention in enumerate(self.attentions):
             self.add_module('attention_{}'.format(i), attention)
 
-        self.out_att = SpGraphAttentionLayer(nhid * nheads, 
-                                             nclass, 
-                                             dropout=dropout, 
-                                             alpha=alpha, 
+        self.out_att = SpGraphAttentionLayer(nhid * nheads,
+                                             nclass,
+                                             dropout=dropout,
+                                             alpha=alpha,
                                              concat=False)
 
     def forward(self, x, adj):
